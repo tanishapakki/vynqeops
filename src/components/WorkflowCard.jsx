@@ -50,12 +50,12 @@ export default function WorkflowCard({ workflow, isSelected, onClick }) {
   // BUG (T-02): no null guard — if assignee is null, this line throws:
   //   TypeError: Cannot read properties of null (reading 'name')
   const assigneeName = workflow.assignee?.name ?? 'Unassigned'
-
+    const tags = Array.isArray(workflow.tags)
+        ? workflow.tags
+        : []
   // BUG (T-02): progress may be a string ("72") or over 100 (143).
   // This renders the bar wider than its container or with string interpolation.
-  // Fix: const progressVal = Math.min(100, Number(workflow.progress) || 0)
-  const progressVal = workflow.progress
-
+  const progressVal = Math.min(100, Number(workflow.progress) || 0)
   const colour = getStatusColour(workflow.status)
 
   return (
@@ -102,11 +102,13 @@ export default function WorkflowCard({ workflow, isSelected, onClick }) {
       </div>
 
       {/* Tags — BUG: tags may be null, .map() throws */}
-      <div className="tags">
-        {workflow.tags.map(tag => (
-          <span key={tag} className="tag">{tag}</span>
-        ))}
-      </div>
+        <div className="tags">
+            {tags.map(tag => (
+                <span key={tag} className="tag">
+      {tag}
+    </span>
+            ))}
+        </div>
 
       {/* Footer: last updated */}
       <div className="card-footer">

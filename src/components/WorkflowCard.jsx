@@ -49,8 +49,7 @@ function formatDate(ts) {
 export default function WorkflowCard({ workflow, isSelected, onClick }) {
   // BUG (T-02): no null guard — if assignee is null, this line throws:
   //   TypeError: Cannot read properties of null (reading 'name')
-  // Fix: const assigneeName = workflow.assignee?.name ?? 'Unassigned'
-  const assigneeName = workflow.assignee.name
+  const assigneeName = workflow.assignee?.name ?? 'Unassigned'
 
   // BUG (T-02): progress may be a string ("72") or over 100 (143).
   // This renders the bar wider than its container or with string interpolation.

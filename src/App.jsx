@@ -75,7 +75,9 @@ export default function App() {
 
         return matchesFilter && matchesSearch
     })
-
+    function handleClose() {
+        setSelectedWorkflow(null)
+    }
   function handleSummarise() {
     // T-09: Mock AI summary. Wire this up.
     // Candidate can use the Anthropic API, a mocked response, or anything creative.
@@ -156,10 +158,11 @@ export default function App() {
         </div>
 
         {/* Detail panel — T-05: empty shell */}
-        <DetailPanel
-          workflow={selectedWorkflow}
-          onClose={() => setSelectedWorkflow(null)}
-        />
+          <DetailPanel
+              workflow={selectedWorkflow}
+              users={data?.users}
+              onClose={handleClose}
+          />
       </div>
 
       {/* TODO: T-08 */}

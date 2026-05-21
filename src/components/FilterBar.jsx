@@ -32,11 +32,10 @@ export default function FilterBar({
   // The button highlights change locally but the prop is never updated.
   const [activeLabel, setActiveLabel] = useState('All')
 
-  function handleClick(filter) {
-    // BUG (T-03): only updates local label state — parent never notified.
-    // Fix: also call onFilterChange(filter.value)
-    setActiveLabel(filter.label)
-  }
+    function handleClick(filter) {
+        setActiveLabel(filter.label)
+        onFilterChange(filter.value)
+    }
 
   return (
     <div className="filter-bar">
@@ -57,9 +56,7 @@ export default function FilterBar({
           placeholder="Search workflows..."
           defaultValue={searchQuery}
           onChange={e => {
-            // BUG (T-03): reads value but never calls onSearchChange
-            const _val = e.target.value
-            // onSearchChange(_val) — this line is missing
+              onSearchChange(e.target.value)
           }}
         />
 

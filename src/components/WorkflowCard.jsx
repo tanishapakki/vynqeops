@@ -1,106 +1,126 @@
 // WorkflowCard.jsx
-//
-// Renders a single workflow card in the grid.
-//
-// INTENTIONAL BUGS:
-//   - assignee.name crash (T-02 / T-07): If assignee is null or {},
-//     accessing assignee.name throws a TypeError. Candidate must guard
-//     with optional chaining: assignee?.name
-//
-//   - progress bar (T-02): progress may be a string ("72") instead of
-//     a number, which breaks the width calculation. Also progress > 100
-//     (e.g. 143) renders a bar wider than its container.
-//     Fix: clamp with Math.min(100, Number(workflow.progress))
-//
-//   - Status rendered inline (T-07): Status display logic is copy-pasted
-//     here AND in DetailPanel, ActivityFeed header, topbar count, and
-//     the summary modal. T-07 asks candidate to extract to StatusBadge.
-//
-//   - tags null crash (T-02): workflow.tags may be null instead of [].
-//     Calling .map() on null throws. Candidate must guard: tags ?? []
+// T-08 additions:
+//   - Quick-action button: surfaces the first suggested_action directly on the card.
+//     Click fires the action without opening the detail panel (stopPropagation).
+//   - Urgency indicator: cards with 'escalate' in suggested_actions get a red left
+//     border; 'mark_blocked' gets yellow. Lets ops staff triage at a glance.
+//   - onAction prop wired through from App.jsx
 
 import React from 'react'
 import StatusBadge from './StatusBadge'
-// Inline status colour map — copy-pasted in 5 places.
-// T-07: extract this into a StatusBadge component.
 
-function formatDate(ts) {
-  if (!ts) return '—'
-  try {
-    // Handles both ISO strings and Unix epoch integers
-    const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts)
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-  } catch {
-    return '—'
-  }
+// Human-readable label for the primary quick action shown on the card.
+// Only the most visible actions are labelled here — rare ones fall back to key.
+const QUICK_ACTION_LABELS = {
+    send_update:     'Send update',
+    escalate:        'Escalate',
+    request_review:  'Request review',
+    mark_blocked:    'Mark blocked',
+    archive:         'Archive',
+    assign_owner:    'Assign owner',
+    reassign:        'Reassign',
+    clarify_owner:   'Clarify owner',
+    flag_data_issue: 'Flag issue',
 }
 
-export default function WorkflowCard({ workflow, isSelected, onClick }) {
-  // BUG (T-02): no null guard — if assignee is null, this line throws:
-  //   TypeError: Cannot read properties of null (reading 'name')
-  const assigneeName = workflow.assignee?.name ?? 'Unassigned'
-    const tags = Array.isArray(workflow.tags)
-        ? workflow.tags
-        : []
-  // BUG (T-02): progress may be a string ("72") or over 100 (143).
-  // This renders the bar wider than its container or with string interpolation.
-  const progressVal = Math.min(100, Number(workflow.progress) || 0)
+function formatDate(ts) {
+    if (!ts) return '—'
+    try {
+        const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts)
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    } catch {
+        return '—'
+    }
+}
 
-  return (
-    <div
-      className={`workflow-card ${isSelected ? 'selected' : ''}`}
-      onClick={() => onClick(workflow)}
-    >
-      {/* Header row: ID + status badge (copy-pasted status logic — T-07) */}
-      <div className="card-header">
-        <span className="card-id">{workflow.id}</span>
-        {/* Inline status — T-07: this exact block is duplicated 4 more times */}
-          <StatusBadge status={workflow.status} />
-      </div>
+// Derive urgency from suggested_actions — used for the card's left border colour.
+function getUrgency(actions) {
+    if (!actions?.length) return null
+    if (actions.includes('escalate')) return 'high'
+    if (actions.includes('mark_blocked') || actions.includes('flag_data_issue')) return 'medium'
+    return null
+}
 
-      {/* Title + client */}
-      <div>
-        <div className="card-title">{workflow.title}</div>
-        <div className="card-client">{workflow.client_name}</div>
-      </div>
+export default function WorkflowCard({ workflow, isSelected, onClick, onAction }) {
+    const assigneeName = workflow.assignee?.name ?? 'Unassigned'
+    const tags         = Array.isArray(workflow.tags) ? workflow.tags : []
+    const progressVal  = Math.min(100, Number(workflow.progress) || 0)
 
-      {/* Progress bar */}
-      <div className="progress-bar-wrap">
+    const suggestedActions = workflow.suggested_actions ?? []
+    const primaryAction    = suggestedActions[0] ?? null
+    const urgency          = getUrgency(suggestedActions)
+
+    const urgencyBorder = {
+        high:   '2px solid var(--status-blocked)',
+        medium: '2px solid var(--status-review)',
+    }
+
+    return (
         <div
-          className="progress-bar-fill"
-          style={{ width: `${progressVal}%` }}
-        />
-      </div>
+            className={`workflow-card ${isSelected ? 'selected' : ''}`}
+            onClick={() => onClick(workflow)}
+            style={urgency ? { borderLeft: urgencyBorder[urgency] } : undefined}
+        >
+            {/* Header row: ID + status badge */}
+            <div className="card-header">
+                <span className="card-id">{workflow.id}</span>
+                <StatusBadge status={workflow.status} />
+            </div>
 
-      {/* Assignee + progress number */}
-      <div className="card-meta">
-        <div className="card-assignee">
-          <div className="avatar">
-            {/* BUG: assignee.avatar also throws when assignee is null */}
-            {workflow.assignee?.avatar ?? '?'}
-          </div>
-          {assigneeName}
-        </div>
-        <span className="muted" style={{ fontSize: '10px' }}>
+            {/* Title + client */}
+            <div>
+                <div className="card-title">{workflow.title}</div>
+                <div className="card-client">{workflow.client_name}</div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="progress-bar-wrap">
+                <div
+                    className="progress-bar-fill"
+                    style={{ width: `${progressVal}%` }}
+                />
+            </div>
+
+            {/* Assignee + progress number */}
+            <div className="card-meta">
+                <div className="card-assignee">
+                    <div className="avatar">
+                        {workflow.assignee?.avatar ?? '?'}
+                    </div>
+                    {assigneeName}
+                </div>
+                <span className="muted" style={{ fontSize: '10px' }}>
           {progressVal}%
         </span>
-      </div>
+            </div>
 
-      {/* Tags — BUG: tags may be null, .map() throws */}
-        <div className="tags">
-            {tags.map(tag => (
-                <span key={tag} className="tag">
-      {tag}
-    </span>
-            ))}
-        </div>
+            {/* Tags */}
+            <div className="tags">
+                {tags.map(tag => (
+                    <span key={tag} className="tag">{tag}</span>
+                ))}
+            </div>
 
-      {/* Footer: last updated */}
-      <div className="card-footer">
+            {/* Footer: last updated + T-08 quick action */}
+            <div className="card-footer">
         <span className="card-updated">
           updated {formatDate(workflow.updated_at)}
         </span>
-      </div>
-    </div>
-  )
+
+                {/* T-08: Quick-action button — fires action without opening detail panel */}
+                {primaryAction && onAction && (
+                    <button
+                        className="card-quick-action"
+                        title={QUICK_ACTION_LABELS[primaryAction] ?? primaryAction}
+                        onClick={e => {
+                            e.stopPropagation() // don't select the card
+                            onAction(workflow, primaryAction, QUICK_ACTION_LABELS[primaryAction] ?? primaryAction)
+                        }}
+                    >
+                        {QUICK_ACTION_LABELS[primaryAction] ?? primaryAction}
+                    </button>
+                )}
+            </div>
+        </div>
+    )
 }

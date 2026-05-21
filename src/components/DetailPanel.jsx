@@ -120,7 +120,7 @@ export default function DetailPanel({
                 <div style={{ marginTop: '12px' }}>
                     <StatusBadge status={workflow.status} />
                 </div>
-                <StatusBadge status={workflow.status} />
+
             </div>
 
             {/* CONTENT */}

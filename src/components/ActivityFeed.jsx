@@ -22,19 +22,75 @@
 
 import React from 'react'
 
-export default function ActivityFeed({ activityLog, users }) {
-  // TODO (T-06): Wire the data. Right now this renders nothing.
-  // Start here:
-  //   const sorted = [...(activityLog ?? [])].sort(
-  //     (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-  //   )
+function formatDate(ts) {
+    if (!ts) return '—'
 
-  return (
-    <div className="activity-feed">
-      <div className="activity-feed-header">Activity</div>
+    try {
+        const d =
+            typeof ts === 'number'
+                ? new Date(ts * 1000)
+                : new Date(ts)
 
-      {/* TODO (T-06): map sorted entries here */}
-      {/* Each entry should look roughly like:
+        return d.toLocaleString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+        })
+    } catch {
+        return '—'
+    }
+}
+
+export default function ActivityFeed({
+                                         activityLog,
+                                         users,
+                                     }) {
+    // TODO (T-06): Wire the data. Right now this renders nothing.
+    // Start here:
+    //   const sorted = [...(activityLog ?? [])].sort(
+    //     (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+    //   )
+
+
+
+    const sorted = [...(activityLog ?? [])]
+
+
+        .sort((a, b) => {
+            const timeA = new Date(a.timestamp).getTime()
+            const timeB = new Date(b.timestamp).getTime()
+
+            return timeB - timeA
+        })
+
+
+    const seen = new Set()
+
+    const deduped = sorted.filter(entry => {
+        const key = [
+            entry.timestamp,
+            entry.user,
+            entry.action,
+            entry.workflow_id,
+        ].join('|')
+
+        if (seen.has(key)) {
+            return false
+        }
+
+        seen.add(key)
+        return true
+    })
+
+    return (
+        <div className="activity-feed">
+            <div className="activity-feed-header">
+                Activity
+            </div>
+
+            {/* TODO (T-06): map sorted entries here */}
+            {/* Each entry should look roughly like:
           <div key={entry.id} style={{ ... }}>
             <span style={{ color: 'var(--text-muted)' }}>{formattedTime}</span>
             {' '}<strong>{userName}</strong>{' '}{entry.action}
@@ -42,9 +98,102 @@ export default function ActivityFeed({ activityLog, users }) {
           </div>
       */}
 
-      <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '8px' }}>
-        T-06: Wire activity log data here. See component comments.
-      </div>
-    </div>
-  )
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '14px',
+                    marginTop: '12px',
+                }}
+            >
+                {deduped.length === 0 ? (
+                    <div
+                        style={{
+                            color: 'var(--text-muted)',
+                            fontSize: '11px',
+                        }}
+                    >
+                        No activity available
+                    </div>
+                ) : (
+                    deduped.map(entry => {
+                        /*
+                          Handle edge case:
+                          user: null
+
+                          We show Anonymous instead of crashing.
+                        */
+
+                        const userName =
+                            users?.[entry.user]?.name ??
+                            'Anonymous'
+
+                        /*
+                          Handle edge case:
+                          action: ""
+
+                          Empty string looks broken in UI.
+                        */
+
+                        const action =
+                            entry.action?.trim() ||
+                            'performed an action'
+
+                        /*
+                          Handle edge case:
+                          wf_999 may not exist.
+
+                          We still render safely because
+                          we only display the workflow id text.
+                        */
+
+                        const workflowId =
+                            entry.workflow_id ??
+                            'Unknown Workflow'
+
+                        return (
+                            <div
+                                key={entry.id}
+                                style={{
+                                    paddingBottom: '12px',
+                                    borderBottom:
+                                        '1px solid var(--border)',
+                                    fontSize: '11px',
+                                    lineHeight: 1.7,
+                                }}
+                            >
+                                {/* TIMESTAMP */}
+                                <div
+                                    style={{
+                                        color: 'var(--text-muted)',
+                                        fontSize: '10px',
+                                        marginBottom: '4px',
+                                    }}
+                                >
+                                    {formatDate(entry.timestamp)}
+                                </div>
+
+                                {/* ACTIVITY TEXT */}
+                                <div>
+                                    <strong>{userName}</strong>{' '}
+                                    {action}
+                                </div>
+
+                                {/* WORKFLOW ID */}
+                                <div
+                                    style={{
+                                        color: 'var(--text-muted)',
+                                        fontSize: '10px',
+                                        marginTop: '2px',
+                                    }}
+                                >
+                                    {workflowId}
+                                </div>
+                            </div>
+                        )
+                    })
+                )}
+            </div>
+        </div>
+    )
 }

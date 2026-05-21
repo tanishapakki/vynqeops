@@ -1,23 +1,5 @@
 import React, { useState, useEffect } from 'react'
-
-function getStatusColour(status) {
-    if (!status) return 'var(--status-unknown)'
-
-    switch (status.toLowerCase()) {
-        case 'active':
-            return 'var(--status-active)'
-        case 'blocked':
-            return 'var(--status-blocked)'
-        case 'review':
-            return 'var(--status-review)'
-        case 'completed':
-            return 'var(--status-completed)'
-        case 'in progress':
-            return 'var(--status-active)'
-        default:
-            return 'var(--status-unknown)'
-    }
-}
+import StatusBadge from './StatusBadge'
 
 function formatDate(ts) {
     if (!ts) return '—'
@@ -61,7 +43,6 @@ export default function DetailPanel({
         )
     }
 
-    const colour = getStatusColour(workflow.status)
 
     const progressVal = Math.max(
         0,
@@ -131,24 +112,15 @@ export default function DetailPanel({
                             fontSize: '16px',
                         }}
                     >
-                        ×
+
                     </button>
                 </div>
 
                 {/* STATUS */}
                 <div style={{ marginTop: '12px' }}>
-          <span
-              className="status-label"
-              style={{ color: colour }}
-          >
-            <span
-                className="status-dot"
-                style={{ background: colour }}
-            />
-
-              {workflow.status ?? 'unknown'}
-          </span>
+                    <StatusBadge status={workflow.status} />
                 </div>
+                <StatusBadge status={workflow.status} />
             </div>
 
             {/* CONTENT */}

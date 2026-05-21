@@ -20,20 +20,9 @@
 //     Calling .map() on null throws. Candidate must guard: tags ?? []
 
 import React from 'react'
-
+import StatusBadge from './StatusBadge'
 // Inline status colour map — copy-pasted in 5 places.
 // T-07: extract this into a StatusBadge component.
-function getStatusColour(status) {
-  if (!status) return 'var(--status-unknown)'
-  switch (status.toLowerCase()) {
-    case 'active':      return 'var(--status-active)'
-    case 'blocked':     return 'var(--status-blocked)'
-    case 'review':      return 'var(--status-review)'
-    case 'completed':   return 'var(--status-completed)'
-    case 'in progress': return 'var(--status-active)'
-    default:            return 'var(--status-unknown)'
-  }
-}
 
 function formatDate(ts) {
   if (!ts) return '—'
@@ -56,7 +45,6 @@ export default function WorkflowCard({ workflow, isSelected, onClick }) {
   // BUG (T-02): progress may be a string ("72") or over 100 (143).
   // This renders the bar wider than its container or with string interpolation.
   const progressVal = Math.min(100, Number(workflow.progress) || 0)
-  const colour = getStatusColour(workflow.status)
 
   return (
     <div
@@ -67,10 +55,7 @@ export default function WorkflowCard({ workflow, isSelected, onClick }) {
       <div className="card-header">
         <span className="card-id">{workflow.id}</span>
         {/* Inline status — T-07: this exact block is duplicated 4 more times */}
-        <span className="status-label" style={{ color: colour }}>
-          <span className="status-dot" style={{ background: colour }} />
-          {workflow.status ?? 'unknown'}
-        </span>
+          <StatusBadge status={workflow.status} />
       </div>
 
       {/* Title + client */}
